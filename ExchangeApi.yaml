@@ -1,0 +1,966 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Exchange Email API
+  description: Api for å kunne gjøre operasjoner mot exchange
+  contact:
+    name: Team Katalog
+    email: w0d1y1a1i2z5f0f1@oslokommune.slack.com
+security:
+  - APIKeyHeader: []
+paths:
+  /migrerteVirksomheter:
+    get:
+      tags:
+        - MigrerteVirksomheter
+      operationId: hentMigrerteVirksomheter
+      description: Henter en liste med alle virksomheter som er markert som migrerte (til exo) i exchange-api
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket uthenting av informasjon
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["ude", "vel", "uke"]
+  /eposter:
+    post:
+      tags:
+        - Postbokser
+      operationId: sendEmail
+      description: Endepunkt for å sende epost over Oslofelles exchange. Epostene blir ikke sendt over internett, men blir direkte lagt til i inboksen til mottakeren.
+        Det kan kun sendes email til Oslo Kommune sine eposter som ligger på Oslofelles sin exchange.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailDto'
+        description: Eposten som skal sendes
+        required: true
+      responses:
+        '200':
+          description: Returner 200 OK ved vellykket innsending av epost
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Returnerer 400 Bad Request ved avvik i formatet på innsending
+          content:
+            text/plain:
+              schema:
+                type: string
+  /postbokser/{cn}:
+    get:
+      tags:
+        - Postbokser
+      operationId: hentPostboksMetadata
+      description: Sjekker om postboks for for angitt cn er aktiv. Forutsetter at mail er satt i AD.
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket uthenting av informasjon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostboksProperties'
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      tags:
+        - Postbokser
+      operationId: opprettPostboks
+      description: Oppretter postboks for angitt cn. Forutsetter at mail er satt i AD.
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: false
+        description: Angir om postboks skal være shared eller ikke.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostboksProperties'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppretting av epost
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    put:
+      tags:
+        - Postbokser
+      operationId: endrePostboksProperties
+      description: Endepunkt for å endre properties for en postboks
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: true
+        description: Properties som skal endres for den angitte postboksen
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostboksProperties'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket deaktivering/aktivering av epost
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Postbokser
+      operationId: slettPostboks
+      description: Sletter postboks for angitt cn. Forutsetter at mail er satt i AD.
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket sletting av postboks
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+  /postbokser/{cn}/alias:
+    put:
+      tags:
+        - Postbokser
+      operationId: oppdaterPostboksAlias
+      description: Oppdaterer alias for angitt cn. Forutsetter at mail er satt i AD.
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: true
+        description: Liste med postboksaliaser. Listen med alias overskriver tidligere satte aliaser for postboks.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostboksAlias'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppretting av alias
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /postbokser/{cnFellesPostboks}/brukere/{cn}:
+    post:
+      tags:
+        - Postbokser
+      operationId: giTilgangFellesPostboks
+      description: Endepunkt for legge til bruker til en felles postboks
+      parameters:
+        - $ref: '#/components/parameters/cn'
+        - $ref: '#/components/parameters/cnFellesPostboks'
+      responses:
+        '200':
+          description: Returnerer 200 OK når bruker har fått tilgang til felles postboks
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Postbokser
+      operationId: fjernTilgangFellesPostboks
+      description: Endepunkt for å fjerne en bruker fra en felles postboks
+      parameters:
+        - $ref: '#/components/parameters/cn'
+        - $ref: '#/components/parameters/cnFellesPostboks'
+      responses:
+        '200':
+          description: Returnerer 200 OK når tilgang til burker har blitt fjernet fra postboks
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /postbokser/{epostadresse}/eposter:
+    get:
+      tags:
+        - Postbokser
+      operationId: hentUlesteEposter
+      description: Endepunkt for å hente alle uleste eposter for en epostkonto på Oslofelles sin exchange. Merk at '/' i epost-IDene er byttet ut med '-'.
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+        - $ref: '#/components/parameters/mappenavn-not-required'
+        - $ref: '#/components/parameters/antalleposter'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket uthenting av epost
+          content:
+            'application/json':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Email'
+                description: Alle uleste eposter for epostkontoen
+        '400':
+          description: Returnerer 400 Bad Request ved ugydlig epostadresse
+        '401':
+          description: Returnerer 401 Unauthorized ved uautoriserte kall
+    delete:
+      tags:
+        - Postbokser
+      operationId: purgeSlettedeEposter
+      description: Endepunkt for å purge slettede eposter innenfor et gitt tidsrom.
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+        - $ref: '#/components/parameters/mappenavn-required'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket purging av slettede eposter
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Returnerer 400 Bad Request ved mislykket purging av slettede eposter
+  /postbokser/{epostadresse}/eposter/{itemId}:
+    put:
+      tags:
+        - Postbokser
+      operationId: endreEpost
+      description: Endepunkt for å oppdatere en angitt epost
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EpostProperties'
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+        - $ref: '#/components/parameters/itemId'
+      responses:
+        '200':
+          description: Returner 200 OK ved vellykket oppdatering av epost
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Returnerer 400 Bad Request ved ugydlige parametre
+        '401':
+          description: Returnerer 401 Unauthorized ved uatoriserte kall
+    delete:
+      tags:
+        - Postbokser
+      operationId: slettEpost
+      description: Endepunkt for å slette epost.
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+        - $ref: '#/components/parameters/itemId'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket sletting av epost
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Returnerer 400 Bad Request ved avvik i sletting av epost
+  /postbokser/{epostadresse}/vedlegg/{epostId}:
+    get:
+      tags:
+        - Postbokser
+      operationId: hentAlleVedleggForEpost
+      description: Endepunkt for å hente alle vedlegg for angitt epost fra Exchange
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+        - $ref: '#/components/parameters/epostId'
+      responses:
+        '200':
+          description: Returnerer 200 OK med en liste med VedleggDto'er
+          content:
+            'application/json':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VedleggDto'
+                description: En liste med vedlegg tilhørende epost
+        '400':
+          description: Returnerer 400 Bad Request ved innsending av ugyldig epostadresse eller epostid
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved feil ved uthenting av vedlegg
+          content:
+            text/plain:
+              schema:
+                type: string
+  /kontakter/{cn}:
+    post:
+      tags:
+        - Kontakter
+      operationId: leggTilKontakt
+      description: Legger til kontaktinformasjon i Exchange
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: true
+        description: Kontaktinformasjon til en OK-ansatt
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Kontakt'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppretting av kontakt.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    put:
+      tags:
+        - Kontakter
+      operationId: oppdaterKontakt
+      description: Oppdaterer  kontaktinformasjon i Exchange
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: true
+        description: Kontaktinformasjon til en OK-ansatt
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Kontakt'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppdatering av kontakt.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Kontakter
+      operationId: slettKontakt
+      description: Sletter kontaktinformasjon i Exchange
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket sletting av kontakt.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+  /moterom/{cn}:
+    post:
+      tags:
+        - Postbokser
+      operationId: opprettMoterom
+      description: Endepunkt for opprette møterom
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppretting av møterom
+          content:
+            'text/plain':
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    put:
+      tags:
+        - Postbokser
+      operationId: oppdaterMoterom
+      description: Oppdaterer møterom for angitt cn
+      parameters:
+        - $ref: '#/components/parameters/cn'
+      requestBody:
+        required: true
+        description: Angir properties for møterommet
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoteromProperties'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppdatering av moterom
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+  /moterom/{cnKalender}/admin/{cn}:
+    post:
+      tags:
+        - Postbokser
+      operationId: leggTilKalenderadmintilgang
+      description: Endepunkt for legge til admintilgang for kalender
+      parameters:
+        - $ref: '#/components/parameters/cnKalender'
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket oppretting av admintilgang for kalender
+          content:
+            'text/plain':
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Postbokser
+      operationId: fjernKalenderadmintilgang
+      description: Oppdaterer møterom for angitt cn
+      parameters:
+        - $ref: '#/components/parameters/cnKalender'
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket fjerning av kalenderadmintilgang
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /distribusjonsgruppe/{distribusjonsGruppe}/moterom/{cn}:
+    post:
+      tags:
+        - Grupper
+      operationId: leggTilMedlemDistribusjongruppe
+      description: Endepunkt for å legge til medlem av distribusjonsgruppe
+      parameters:
+        - $ref: '#/components/parameters/distribusjonsGruppe'
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK når medlem har blitt lagt til i distribusjonsgruppen
+          content:
+            'text/plain':
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Grupper
+      operationId: fjernMedlemDistribusjongruppe
+      description: Endepunkt for å fjerne medlem fra en distribusjonsgrupp
+      parameters:
+        - $ref: '#/components/parameters/distribusjonsGruppe'
+        - $ref: '#/components/parameters/cn'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket fjerning av medlem fra distribusjonsgruppe
+          content:
+            'text/plain':
+              schema:
+                type: string
+        '500':
+          description: Returnerer 500 Internal Server Error ved mislykket operasjon med Powershell
+          content:
+            text/plain:
+              schema:
+                type: string
+  /lisenser/{epostadresse}:
+    post:
+      tags:
+        - Lisens
+      operationId: leggTilLisens
+      description: Legger til epostadresse i en Exchange Online-lisensgruppe. Dersom epostadressen allerede har
+        medlemskap i en annen Exchange Online-lisensgruppen, vil den nye gruppen erstatte den gamle. Dersom
+        epostadressen allerede ligger i gruppen, skjer ingenting.
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Lisens'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket tilleggelse av bruker i gruppe.
+          content:
+            application/json:
+              schema:
+                type: string
+    delete:
+      tags:
+        - Lisens
+      operationId: fjernLisens
+      description: Fjerner epostadresse fra alle Exchange Online-lisensgrupper. Det skal i teorien bare være én, men
+        dette endepunktet går allikevel igjennom alle og fjerner alt.
+      parameters:
+        - $ref: '#/components/parameters/epostadresse'
+      responses:
+        '200':
+          description: Returnerer 200 OK ved vellykket fjerning av lisens.
+          content:
+            application/json:
+              schema:
+                type: string
+components:
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      in: header
+      name: apikey
+  parameters:
+    epostadresse:
+      name: epostadresse
+      required: true
+      in: path
+      description: Epostadresse
+      schema:
+        type: string
+      example: ola.nordmann@drift.oslo.kommune.no
+    epostId:
+      name: epostId
+      required: true
+      in: path
+      description: Id på epost i Exchange
+      schema:
+        type: string
+      example: AAMkADNhYzc2Mzc1LTgxMmQtNDU2OS1hY2NiLTNmZTAzZjZhOWRhMQBGAAAAAAAaMcZ7Nk4URoVqvgRTSquVBwCeboj9abPBQanWrT5CWxzRAAAAAAEMAACeboj9abPBQanWrT5CWxzRAAARyzuNAAA=
+    cn:
+      name: cn
+      required: true
+      in: path
+      description: CN i AD
+      schema:
+        type: string
+      example: drift265351
+    cnKalender:
+      name: cnKalender
+      required: true
+      in: path
+      description: CN for kalender i AD
+      schema:
+        type: string
+      example: drift265351
+    cnFellesPostboks:
+      name: cnFellesPostboks
+      required: true
+      in: path
+      description: CN på felles postboks i AD
+      schema:
+        type: string
+      example: drift265351
+    mappenavn-not-required:
+      name: mappenavn
+      required: false
+      in: query
+      description: Navnet på mappen
+      schema:
+        type: string
+        default: Inbox
+      example: Inbox
+    mappenavn-required:
+      name: mappenavn
+      required: true
+      in: query
+      description: Navnet på mappen
+      schema:
+        type: string
+      example: DeletedItems
+    antalleposter:
+      name: antalleposter
+      required: false
+      in: query
+      description: Antall eposter
+      schema:
+        type: integer
+        default: 1000
+      example: 10
+    itemId:
+      name: itemId
+      schema:
+        type: string
+      required: true
+      in: path
+      description: ID på epost. IDen fra Exchange kan inneholde '/'. Endepunktet forventer at IDen ikke inneholder '/', men at de er byttet ut med '-'.
+        GET `/postbokser/{epostadresse}/eposter` gjør allerede denne enkodingen, slik at IDene som mottas derifra er sikret å ikke inneholde '/'.
+      example: AAMkADgzNDg5MmVkLWY5MjktNDk0Yy1iNzczLTdkMjc1ZTZmNzY2OQBGAAAAAAC2NPVx9ThbRIvyH893pdBfBwDwxItff07nR7SQo+WVJXTBAAAAAAEMAADwxItff07nR7SQo+WVJXTBAAE6BXxJAAA=
+    distribusjonsGruppe:
+      name: distribusjonsGruppe
+      schema:
+        type: string
+      required: true
+      in: path
+      description: Navn på en distribusjonsGruppe
+  schemas:
+    Email:
+      type: object
+      properties:
+        sender:
+          $ref: '#/components/schemas/Sender'
+        subject:
+          type: string
+          description: Emne til eposten
+          example: Dette er et emne
+        body:
+          $ref: '#/components/schemas/Body'
+        itemIdChangeKey:
+          $ref: '#/components/schemas/ItemIdChangeKey'
+        timeStampReceived:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+    Sender:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Eposten til avsender
+          example: ola.nordmann@drift.oslo.kommune.no
+        name:
+          type: string
+          example: Ola Nordmann
+          description: Navnet på avsender
+    Subject:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Emne til eposten
+          example: Dette er et emne
+    Body:
+      type: object
+      properties:
+        content:
+          type: string
+          description: Body-en til mailen
+          example: Dette er body-en
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+    ContentType:
+      type: string
+      enum:
+        - HTML
+        - PLAIN_TEXT
+    ItemIdChangeKey:
+      type: object
+      properties:
+        itemId:
+          type: string
+          description: En itemId
+        changeKey:
+          type: string
+          description: En changeKey
+    Attachment:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: filnavnet til vedlegget
+          example: filnavn.txt
+        exchangeId:
+          type: string
+          description: Id på vedlegget
+          example: 1
+    EmailDto:
+      type: object
+      properties:
+        mottakerepost:
+          type: array
+          items:
+            type: string
+          example:
+            - mottaker1@drift.oslo.kommune.no
+            - mottaker2@drift.oslo.kommune.no
+          description: >-
+            Liste med Oslo Kommune epostadresser til primærmottakere av
+            epostmeldingen.
+        epostcc:
+          type: array
+          items:
+            type: string
+          example:
+            - mottaker1@drift.oslo.kommune.no
+            - mottaker2@drift.oslo.kommune.no
+          description: >-
+            Liste med Oslo Kommune epostadresser til kopi-mottakere av
+            epostmeldingen.
+        epostbcc:
+          type: array
+          items:
+            type: string
+          example:
+            - mottaker1@drift.oslo.kommune.no
+            - mottaker2@drift.oslo.kommune.no
+          description: >-
+            Liste med Oslo Kommune epostadresser til blindkopi-mottakere av
+            epostmeldingen.
+        avsenderepost:
+          type: string
+          example: avsender@drift.oslo.kommune.no
+          description: Epostadressen til avsender.
+        emne:
+          type: string
+          example: Dette er emnet til epostmeldingen
+          description: Epostmeldingens emne.
+        meldingskropp:
+          type: string
+          example: >-
+            Hei, dette er er meldingskroppen til epostmeldingen. Hilsen
+            Avsender
+          description: Epostmeldingens meldingskropp.
+        vedlegg:
+          type: array
+          items:
+            $ref: '#/components/schemas/VedleggDto'
+          description: Liste med vedlegg til epostmeldingen.
+      required:
+        - avsenderepost
+        - emne
+        - meldingskropp
+    VedleggDto:
+      type: object
+      properties:
+        filnavn:
+          type: string
+          example: testfil.pdf
+          description: Dette feltet angir vedleggets filnavn.
+        contenttype:
+          type: string
+          example: application/pdf
+          description: Dette feltet angir vedlegges type.
+        fil:
+          type: string
+          description: >-
+            Dette feltet inneholder selve vedlegget som en
+            Base64-kodet tekststreng.
+        contentid:
+          type: string
+          description: >
+            Content-ID brukes for å kunne embedde et vedlegg til
+            mailen ved bruk av HTML. Hvis denne er satt legges filen inline i
+            mailen og vil ikke dukke opp som et vedlegg. Eksempel HTML:
+            `<![CDATA[<img src="cid:XXX" />]]>`.
+      required:
+        - filnavn
+        - contenttype
+        - fil
+    EpostProperties:
+      type: object
+      properties:
+        folderName:
+          type: string
+          example: Inbox
+          description: Angir en mappe for en epostadresse.
+        lest:
+          type: boolean
+          example: true
+          description: Marker epost som lest/ulest
+    PostboksProperties:
+      type: object
+      properties:
+        aktiv:
+          type: boolean
+          default: null
+          example: true
+          description: Angir om postboks er aktivert eller ikke.
+        hiddenFromAddressList:
+          type: boolean
+          default: null
+          example: true
+          description: Tilsier om  en postboks skal være tilgjengelig i global adresseliste
+        shared:
+          type: boolean
+          default: null
+          example: false
+          description: Angir om postboks skal være shared eller ikke
+        sharedAdGroup:
+          type: string
+          default: null
+          example: DRIFT123
+          description: Angir AD-gruppe for medlemskap
+        activeSync:
+          type: boolean
+          default: null
+          example: true
+          description: Tilsier om ActiveSync skal aktiveres eller deaktiveres for en postboks.
+        postboksLimits:
+          $ref: '#/components/schemas/PostboksLimits'
+    PostboksLimits:
+      type: object
+      properties:
+        mailMaxSendSize:
+          type: string
+          default: null
+          example: 100KB
+          description: Angir maksstørrelse på mail som kan sendes.
+        mailMaxReceiveSize:
+          type: string
+          default: null
+          example: 100MB
+          description: Angir maksstørrelse på mail som kan mottas.
+        mailboxWarningSize:
+          type: string
+          default: null
+          example: 10GB
+          description: Angir maksstørrelse på postboksadvarsler.
+        mailboxMaxSize:
+          type: string
+          default: null
+          example: 1000MB
+          description: Angir maksstørrelse på postboks.
+        mailboxSendStopSize:
+          type: string
+          default: null
+          example: 100KB
+          description: Angir maksstørrelse på postboks sende.
+    MoteromProperties:
+      type: object
+      properties:
+        autoAccept:
+          type: boolean
+          default: null
+          example: true
+          description: Angir om møterommet skal ha autoaccept eller ikke.
+        reviewerAccessRights:
+          type: boolean
+          default: null
+          example: true
+          description: Angir om møterommet skal ha kalenderinnsyn reviewer eller ikke.
+    PostboksAlias:
+      type: object
+      properties:
+        hovedepostadresse:
+          type: string
+          example: eksempel@drift.oslo.kommune.no
+          description: Angir hovedepostadresse
+        proxyadresser:
+          type: array
+          items:
+            type: string
+          example:
+            - proxyadresse1@nnn.oslo.kommune.no
+            - proxyadresse2@nnn.oslo.kommune.no
+          description: Angir proxyadresser som alias skal gjelde for
+    Kontakt:
+      type: object
+      properties:
+        visningsnavn:
+          type: string
+          example: Navn Navnesen
+          description: Angir visningsnavn
+        epostadresse:
+          type: string
+          example: ola.nordmann@drift.oslo.kommune.no
+          description: Angir epostadresse
+        relpath:
+          type: string
+          example: oktest.oslo.kommune.no/OK/Eksterne brukere/DRIFT
+          description: sti i AD til organisasjonen
+        hiddenFromAddressList:
+          type: boolean
+          default: null
+          example: true
+          description: Tilsier om  en kontakt skal være tilgjengelig i global adresseliste
+    Lisens:
+      type: object
+      properties:
+        lisenstype:
+          type: string
+          description: Definerer lisenstypen som skal tildeles
+          enum:
+            - E1
+            - E3
+            - E1E5
+            - E3E5
+        harUtvidetSikkerhet:
+          type: boolean
+          default: false
+          example: true
+          description: Hvorvidt brukeren skal ha utvidet sikkerhet på lisensen sin
+        kanHaIkkeadministrertEnhet:
+          type: boolean
+          default: false
+          example: true
+          description: Hvorvidt brukeren skal kunne benytte seg av en ikke-administrert enhet (ikke innmeldt i oslofelles).
